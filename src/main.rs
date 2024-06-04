@@ -120,13 +120,22 @@ pub mod parser {
     pub fn maybe_parse_single_char(inp: &Option<char>) -> Result<ast::SKI, ast::SKIErr> {
         match inp {
             None => Err(String::from("no input")),
-            Some(c)=>parse_single_char(c),
-            
+            Some(c) => parse_single_char(c),
         }
     }
     /// parses the App variant of the ski combinator
     pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
-        
+        if inp.ends_with(')') {
+            for (i, c) in inp.char_indices() {
+                if c == '(' {
+                    return Ok(ast::SKI::app(
+                        parse_ski(&inp[..i])?,
+                        parse_ski(&inp[i + 1..inp.len() - 1])?,
+                    ));
+                }
+            }
+            return Err(String::from("unclosed parentheses"));
+        } else {
             match maybe_parse_single_char(&inp.chars().last()) {
                 Err(e) => return Err(e),
                 Ok(skiprim) => match parse_ski(&inp[..inp.len() - 1]) {
@@ -135,28 +144,16 @@ pub mod parser {
                 },
             }
         }
-    
+    }
+    /// parse any SKI variant
     pub fn parse_ski(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
-        if inp.len() < 1 {
-            return Err(String::from("Empty input"));
-        }
-        if inp.len() == 1 {
-            return parse_single_char(&inp.chars().next().unwrap()); // this unwrap should be fine as we already checked the length.
-        } else {
-            parse_app(inp)
-        }
-        }
-    
-
-    pub fn parse(inp: &str) -> ast::SKI {
-        match inp {
-            "S" => ast::SKI::S,
-            "K" => ast::SKI::K,
-            "I" => ast::SKI::I,
-            _ => ast::SKI::I,
+        match inp.chars().count() {
+            0 => Err(String::from("Empty input")),
+            1 => parse_single_char(&inp.chars().next().unwrap()), // this unwrap should be fine as we already checked the length.
+            _ => parse_app(inp),
         }
     }
-    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -224,11 +221,7 @@ mod tests {
         );
         assert_eq!(ast::eval(sksi), ast::SKI::I);
     }
-    #[test]
-    /// tests parse
-    fn parse_i_as_i() {
-        assert_eq!(parser::parse(&String::from("I")), ast::SKI::I);
-    }
+
     #[test]
     /// tests parse
     fn parse_i_succeeds_with_i() {
@@ -275,6 +268,26 @@ mod tests {
             Ok(ast::SKI::app(
                 ast::SKI::app(ast::SKI::K, ast::SKI::I),
                 ast::SKI::S
+            ))
+        );
+    }
+    #[test]
+    fn parse_ski_succeeds_with_parens_first() {
+        assert_eq!(
+            parser::parse_ski(&String::from("(KI)S")),
+            Ok(ast::SKI::app(
+                ast::SKI::app(ast::SKI::K, ast::SKI::I),
+                ast::SKI::S
+            ))
+        );
+    }
+    #[test]
+    fn parse_ski_succeeds_with_parens() {
+        assert_eq!(
+            parser::parse_ski(&String::from("K(IS)")),
+            Ok(
+                ast::SKI::app(ast::SKI::K, ast::SKI::app(ast::SKI::I,
+                ast::SKI::S)
             ))
         );
     }
