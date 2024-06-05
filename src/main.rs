@@ -125,7 +125,13 @@ pub mod parser {
     }
     /// parses the App variant of the ski combinator
     pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
+        if inp.ends_with('('){
+            return Err(String::from("unclosed parentheses"));
+        }
         if inp.ends_with(')') {
+            if inp.starts_with('('){
+                return parse_ski(&inp[1..inp.len() - 1]);
+            }
             for (i, c) in inp.char_indices() {
                 if c == '(' {
                     return Ok(ast::SKI::app(
@@ -134,7 +140,7 @@ pub mod parser {
                     ));
                 }
             }
-            return Err(String::from("unclosed parentheses"));
+            return Err(String::from("unmatched closing parentheses"));
         } else {
             match maybe_parse_single_char(&inp.chars().last()) {
                 Err(e) => return Err(e),
