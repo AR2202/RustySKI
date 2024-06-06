@@ -5,11 +5,10 @@ fn main() {
         arg: ast::SKI::K,
     };
     println!("{:?}", ast::eval(ast::SKI::Application(Box::new(app))));
-    let app2 = ast::App {
-        combinator: ast::SKI::K,
-        arg: ast::SKI::I,
-    };
-    println!("{:?}", ast::eval(ast::SKI::Application(Box::new(app2))));
+    println!(
+        "{:?}",
+        parser::parse_and_eval("KI(IS)").unwrap_or(ast::SKI::K)
+    );
 }
 
 mod ast {
@@ -73,8 +72,7 @@ mod ast {
 }
 pub mod parser {
     use crate::ast::{self, eval};
-   
-   
+
     /// parses a single char as a SKI primitive or else returns a SKIErr
     pub fn parse_single_char(inp: &char) -> Result<ast::SKI, ast::SKIErr> {
         match inp {
@@ -93,11 +91,11 @@ pub mod parser {
     }
     /// parses the App variant of the ski combinator
     pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
-        if inp.ends_with('('){
+        if inp.ends_with('(') {
             return Err(String::from("unclosed parentheses"));
         }
         if inp.ends_with(')') {
-            if inp.starts_with('('){
+            if inp.starts_with('(') {
                 return parse_ski(&inp[1..inp.len() - 1]);
             }
             for (i, c) in inp.char_indices() {
@@ -127,7 +125,7 @@ pub mod parser {
             _ => parse_app(inp),
         }
     }
-    pub fn parse_and_eval(inp: &str) -> Result<ast::SKI, ast::SKIErr>{
+    pub fn parse_and_eval(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
         parse_ski(inp).map(|ski| eval(ski))
     }
 }
@@ -199,7 +197,6 @@ mod tests {
         assert_eq!(ast::eval(sksi), ast::SKI::I);
     }
 
-    
     #[test]
     fn parse_app_succeeds_with_kii() {
         assert_eq!(
@@ -234,9 +231,9 @@ mod tests {
     fn parse_ski_succeeds_with_parens() {
         assert_eq!(
             parser::parse_ski(&String::from("K(IS)")),
-            Ok(
-                ast::SKI::app(ast::SKI::K, ast::SKI::app(ast::SKI::I,
-                ast::SKI::S)
+            Ok(ast::SKI::app(
+                ast::SKI::K,
+                ast::SKI::app(ast::SKI::I, ast::SKI::S)
             ))
         );
     }
