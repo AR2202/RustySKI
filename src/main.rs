@@ -72,41 +72,9 @@ mod ast {
     }
 }
 pub mod parser {
-    use crate::ast;
-    /// parses I combinator at the beginning of String and returns a tuple of the parsed combinator and the rest of the string; if it fails, returns a SKIErr
-    pub fn parse_i(inp: &str) -> Result<(ast::SKI, String), ast::SKIErr> {
-        let mut characters = inp.chars();
-        match characters.next().unwrap() {
-            'I' => Ok((ast::SKI::I, characters.collect())),
-            _ => Err(String::from("not I")),
-        }
-    }
-    pub fn parse_k(inp: &str) -> Result<(ast::SKI, String), ast::SKIErr> {
-        let mut characters = inp.chars();
-        match characters.next().unwrap() {
-            'K' => Ok((ast::SKI::K, characters.collect())),
-            _ => Err(String::from("not K")),
-        }
-    }
-    pub fn parse_s(inp: &str) -> Result<(ast::SKI, String), ast::SKIErr> {
-        let mut characters = inp.chars();
-        match characters.next().unwrap() {
-            'S' => Ok((ast::SKI::S, characters.collect())),
-            _ => Err(String::from("not S")),
-        }
-    }
-    pub fn parse_primitive(inp: &str) -> Result<(ast::SKI, String), ast::SKIErr> {
-        match parse_i(inp) {
-            Ok(parsed) => Ok(parsed),
-            Err(_) => match parse_k(inp) {
-                Ok(parsed) => Ok(parsed),
-                Err(_) => match parse_s(inp) {
-                    Ok(parsed) => Ok(parsed),
-                    Err(_) => Err(String::from("no SKI primitive")),
-                },
-            },
-        }
-    }
+    use crate::ast::{self, eval};
+   
+   
     /// parses a single char as a SKI primitive or else returns a SKIErr
     pub fn parse_single_char(inp: &char) -> Result<ast::SKI, ast::SKIErr> {
         match inp {
@@ -158,6 +126,9 @@ pub mod parser {
             1 => parse_single_char(&inp.chars().next().unwrap()), // this unwrap should be fine as we already checked the length.
             _ => parse_app(inp),
         }
+    }
+    pub fn parse_and_eval(inp: &str) -> Result<ast::SKI, ast::SKIErr>{
+        parse_ski(inp).map(|ski| eval(ski))
     }
 }
 
@@ -228,35 +199,7 @@ mod tests {
         assert_eq!(ast::eval(sksi), ast::SKI::I);
     }
 
-    #[test]
-    /// tests parse
-    fn parse_i_succeeds_with_i() {
-        assert_eq!(
-            parser::parse_i(&String::from("IK")),
-            Ok((ast::SKI::I, String::from("K")))
-        );
-    }
-    #[test]
-    fn parse_i_fails_with_k() {
-        assert_eq!(
-            parser::parse_i(&String::from("KIK")),
-            Err(String::from("not I"))
-        );
-    }
-    #[test]
-    fn parse_primitive_with_k() {
-        assert_eq!(
-            parser::parse_primitive(&String::from("KIK")),
-            Ok((ast::SKI::K, String::from("IK")))
-        );
-    }
-    #[test]
-    fn parse_primitive_fails_with_t() {
-        assert_eq!(
-            parser::parse_primitive(&String::from("TIK")),
-            Err(String::from("no SKI primitive"))
-        );
-    }
+    
     #[test]
     fn parse_app_succeeds_with_kii() {
         assert_eq!(
@@ -295,6 +238,13 @@ mod tests {
                 ast::SKI::app(ast::SKI::K, ast::SKI::app(ast::SKI::I,
                 ast::SKI::S)
             ))
+        );
+    }
+    #[test]
+    fn parse_and_eval_succeeds_with_kii() {
+        assert_eq!(
+            parser::parse_and_eval(&String::from("KIS")),
+            Ok(ast::SKI::I)
         );
     }
 }
