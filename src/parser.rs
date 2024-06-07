@@ -1,5 +1,5 @@
 use crate::ast;
-use crate::ast::eval;
+use crate::eval;
 
 /// parses a single char as a SKI primitive or else returns a SKIErr
 pub fn parse_single_char(inp: &char) -> Result<ast::SKI, ast::SKIErr> {
@@ -54,7 +54,7 @@ pub fn parse_ski(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
     }
 }
 pub fn parse_and_eval(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
-    parse_ski(inp).map(|ski| eval(ski))
+    parse_ski(inp).map(|ski| eval::eval(ski))
 }
 
 #[cfg(test)]
