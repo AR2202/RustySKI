@@ -92,7 +92,7 @@ mod tests {
         );
     }
     #[test]
-    fn parse_ski_succeeds_with_parens() {
+    fn parse_ski_succeeds_with_parens_last() {
         assert_eq!(
             parse_ski(&String::from("K(IS)")),
             Ok(ast::SKI::app(
@@ -101,8 +101,54 @@ mod tests {
             ))
         );
     }
+
+    #[test]
+    fn parse_ski_succeeds_with_parens_middle() {
+        assert_eq!(parse_and_eval(&String::from("K(IS)K")), Ok(ast::SKI::S));
+    }
     #[test]
     fn parse_and_eval_succeeds_with_kii() {
         assert_eq!(parse_and_eval(&String::from("KIS")), Ok(ast::SKI::I));
+    }
+    #[test]
+    fn parse_and_eval_fails_with_non_primitive() {
+        assert_eq!(
+            parse_and_eval(&String::from("KIT")),
+            Err(String::from("no SKI primitive"))
+        );
+        assert_eq!(
+            parse_and_eval(&String::from("T")),
+            Err(String::from("no SKI primitive"))
+        );
+        assert_eq!(
+            parse_and_eval(&String::from("AKI")),
+            Err(String::from("no SKI primitive"))
+        );
+    }
+    #[test]
+    fn parse_and_eval_fails_with_unclosed_parens() {
+        assert_eq!(
+            parse_and_eval(&String::from("K(I")),
+            Err(String::from("unclosed parentheses"))
+        );
+        assert_eq!(
+            parse_and_eval(&String::from("K(IS(KI)")),
+            Err(String::from("unclosed parentheses"))
+        );
+    }
+    #[test]
+    fn parse_and_eval_fails_with_unmatched_parens() {
+        assert_eq!(
+            parse_and_eval(&String::from("K(I))")),
+            Err(String::from("unmatched closing parentheses"))
+        );
+        assert_eq!(
+            parse_and_eval(&String::from("K(I)K)")),
+            Err(String::from("unmatched closing parentheses"))
+        );
+        assert_eq!(
+            parse_and_eval(&String::from("K(IK)SK)")),
+            Err(String::from("unmatched closing parentheses"))
+        );
     }
 }
