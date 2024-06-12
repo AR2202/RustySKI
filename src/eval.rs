@@ -85,10 +85,23 @@ mod tests {
         let kiks = ast::SKI::app(ast::SKI::app(ast::SKI::app(ast::SKI::K, ast::SKI::I), ast::SKI::K), ast::SKI::S);
         assert_eq!(eval(kiks), ast::SKI::S);
     }
+    
     #[test]
-    /// tests S
+    /// tests SKSI reduces to I
     fn sksi_evaluates_to_i() {
         let sksi = ast::SKI::app(ast::SKI::app(ast::SKI::app(ast::SKI::S, ast::SKI::K), ast::SKI::S), ast::SKI::I);
         assert_eq!(eval(sksi), ast::SKI::I);
+    }
+    #[test]
+    /// tests SKSI reduces to I
+    fn sk_is_irreducable() {
+        let sk = ast::SKI::app(ast::SKI::S, ast::SKI::K);
+        assert_eq!(eval(sk.clone()), sk);
+    }
+    #[test]
+    /// tests SKSI reduces to I
+    fn ski_is_irreducable() {
+        let ski = ast::SKI::app(ast::SKI::app(ast::SKI::S,ast::SKI::K ),ast::SKI::I);
+        assert_eq!(eval(ski.clone()), ski);
     }
 }
