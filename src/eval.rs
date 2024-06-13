@@ -110,4 +110,10 @@ mod tests {
         let ski = ast::SKI::app(ast::SKI::app(ast::SKI::S,ast::SKI::K ),ast::SKI::I);
         assert_eq!(eval(ski.clone()), ski);
     }
+    #[test]
+    /// tests SKSI reduces to I
+    fn sik_is_irreducable() {
+        let sik = ast::SKI::app(ast::SKI::app(ast::SKI::S,ast::SKI::I ),ast::SKI::K);
+        assert_eq!(eval(sik.clone()), sik);
+    }
 }
