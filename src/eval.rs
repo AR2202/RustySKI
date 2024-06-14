@@ -4,19 +4,19 @@ use crate::ast;
 pub fn eval(skiexp: ast::SKI) -> ast::SKI {
     match skiexp {
         ast::SKI::Application(boxed_app) =>{
-            let app = *boxed_app;
+            let app = &*boxed_app;
         match &app.combinator {
-            ast::SKI::I => eval(app.arg),
+            ast::SKI::I => eval(app.arg.clone()),
 
             ast::SKI::Application(boxed_app2) => {
-                let app2 = &**boxed_app2;
+                let app2 = &*boxed_app2;
                 match &app2.combinator {
                 ast::SKI::K => eval(app2.arg.clone()),
                 ast::SKI::Application(boxed_app3) => {
-                    let app3 = &**boxed_app3;
+                    let app3 = &*boxed_app3;
                     match &app3.combinator {
                     ast::SKI::S => eval(ast::SKI::app(
-                        ast::SKI::app(app3.arg.clone(), app.arg),
+                        ast::SKI::app(app3.arg.clone(), app.arg.clone()),
                         ast::SKI::app(app2.arg.clone(), app3.arg.clone()),
                     )),
 
@@ -25,9 +25,9 @@ pub fn eval(skiexp: ast::SKI) -> ast::SKI {
 
                 ast::SKI::S => ast::SKI::app(
                     ast::SKI::app(ast::SKI::S, eval(app2.arg.clone())),
-                    eval(app.arg),
+                    eval(app.arg.clone()),
                 ),
-                _ => eval(ast::SKI::app(eval(app.combinator), app.arg)),
+                _ => eval(ast::SKI::app(eval(app.combinator.clone()), app.arg.clone())),
             }},
 
             ast::SKI::K => ast::SKI::app(ast::SKI::K, eval(app.arg.clone())),
