@@ -12,7 +12,7 @@ pub struct App {
     pub arg: SKI,
 }
 impl SKI {
-    fn is_application(&self) -> bool {
+    pub fn is_application(&self) -> bool {
         match self {
             SKI::Application(_) => true,
             _ => false,
