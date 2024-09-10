@@ -18,7 +18,7 @@ pub fn maybe_parse_single_char(inp: &Option<char>) -> Result<ast::SKI, ast::SKIE
     }
 }
 /// parses the App variant of the ski combinator
-pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
+pub fn parse_app2(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
     if inp.ends_with('(') {
         return Err(String::from("unclosed parentheses"));
     }
@@ -43,6 +43,80 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
                 Ok(skiexpr) => return Ok(ast::SKI::app(skiexpr, skiprim)),
             },
         }
+    }
+}
+pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
+    let open_parens: Vec<usize> = inp
+        .char_indices()
+        .filter(|(i, c)| *c == '(')
+        .map(|(i, c)| i)
+        .collect();
+    let close_parens: Vec<usize> = inp
+        .char_indices()
+        .filter(|(i, c)| *c == ')')
+        .map(|(i, c)| i)
+        .collect();
+
+    if open_parens.len() != close_parens.len() {
+        return Err(String::from("unmatched closing parentheses"));
+    }
+    if open_parens.len() == 0 {
+        match maybe_parse_single_char(&inp.chars().last()) {
+            Err(e) => return Err(e),
+            Ok(skiprim) => match parse_ski(&inp[..inp.len() - 1]) {
+                Err(e) => return Err(e),
+                Ok(skiexpr) => return Ok(ast::SKI::app(skiexpr, skiprim)),
+            },
+        }
+    } else {
+        let (matched_parens_open, matched_parens_close) = match_parens(open_parens, close_parens);
+        if matched_parens_open == 0 {
+            if matched_parens_close == inp.len() - 1 {
+                return parse_ski(&inp[1..inp.len() - 1]);
+            } else {
+                return Ok(ast::SKI::app(
+                    parse_ski(&inp[..matched_parens_close])?,
+                    parse_ski(&inp[matched_parens_close + 1..inp.len()])?,
+                ));
+            }
+        }
+        if matched_parens_close == inp.len() - 1 {
+            return Ok(ast::SKI::app(
+                parse_ski(&inp[..matched_parens_open])?,
+                parse_ski(&inp[matched_parens_open + 1..matched_parens_close])?,
+            ));
+        } else {
+            return Ok(ast::SKI::app(
+                parse_ski(&inp[..matched_parens_open])?,
+                ast::SKI::app(
+                    parse_ski(&inp[matched_parens_open + 1..matched_parens_close])?,
+                    parse_ski(&inp[matched_parens_close + 1..inp.len()])?,
+                ),
+            ));
+        }
+    }
+}
+
+pub fn match_parens(open_parens: Vec<usize>, close_parens: Vec<usize>) -> (usize, usize) {
+    let mut open_iter = open_parens.iter();
+    let mut close_iter = close_parens.iter();
+    let open = open_iter.next();
+    match open {
+        None => return (0, 0),
+        Some(&op) => loop {
+            let next_open = open_iter.next();
+            let next_close = close_iter.next();
+            match next_open {
+                None => return (op, *next_close.unwrap()),
+                Some(o) => {
+                    if o > next_close.unwrap() {
+                        return (op, *next_close.unwrap());
+                    } else {
+                        continue;
+                    }
+                }
+            }
+        },
     }
 }
 /// parse any SKI variant
