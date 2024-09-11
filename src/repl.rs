@@ -16,7 +16,7 @@ pub fn repl() {
         let parsed = parser::parse_and_eval(&inp.trim());
         match parsed{
             Ok(x) => println!("{:?}", x),
-            Err(y) => println!("{}",&y),
+            Err(y) => println!("{:?}",&y),
         }
 
     }

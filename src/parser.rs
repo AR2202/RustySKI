@@ -7,20 +7,20 @@ pub fn parse_single_char(inp: &char) -> Result<ast::SKI, ast::SKIErr> {
         'I' => Ok(ast::SKI::I),
         'K' => Ok(ast::SKI::K),
         'S' => Ok(ast::SKI::S),
-        _ => Err(String::from("no SKI primitive")),
+        _ => Err(ast::SKIErr::ParseError(String::from("no SKI primitive"))),
     }
 }
 /// parses an optional value of type char and returns error on None
 pub fn maybe_parse_single_char(inp: &Option<char>) -> Result<ast::SKI, ast::SKIErr> {
     match inp {
-        None => Err(String::from("no input")),
+        None => Err(ast::SKIErr::ParseError(String::from("no input"))),
         Some(c) => parse_single_char(c),
     }
 }
 /// parses the App variant of the ski combinator
 pub fn parse_app2(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
     if inp.ends_with('(') {
-        return Err(String::from("unclosed parentheses"));
+        return Err(ast::SKIErr::SyntaxError(String::from("unclosed parentheses")));
     }
     if inp.ends_with(')') {
         if inp.starts_with('(') {
@@ -34,7 +34,7 @@ pub fn parse_app2(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
                 ));
             }
         }
-        return Err(String::from("unmatched closing parentheses"));
+        return Err(ast::SKIErr::SyntaxError(String::from("unmatched closing parentheses")));
     } else {
         match maybe_parse_single_char(&inp.chars().last()) {
             Err(e) => return Err(e),
@@ -57,8 +57,11 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
         .map(|(i, c)| i)
         .collect();
 
-    if open_parens.len() != close_parens.len() {
-        return Err(String::from("unmatched closing parentheses"));
+    if open_parens.len() > close_parens.len() {
+        return Err(ast::SKIErr::SyntaxError(String::from("unclosed parentheses")));
+    }
+    if open_parens.len() < close_parens.len() {
+        return Err(ast::SKIErr::SyntaxError(String::from("unmatched closing parentheses")));
     }
     if open_parens.len() == 0 {
         match maybe_parse_single_char(&inp.chars().last()) {
@@ -75,7 +78,7 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
                 return parse_ski(&inp[1..inp.len() - 1]);
             } else {
                 return Ok(ast::SKI::app(
-                    parse_ski(&inp[..matched_parens_close])?,
+                    parse_ski(&inp[1..matched_parens_close])?,
                     parse_ski(&inp[matched_parens_close + 1..inp.len()])?,
                 ));
             }
@@ -86,13 +89,13 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
                 parse_ski(&inp[matched_parens_open + 1..matched_parens_close])?,
             ));
         } else {
-            return Ok(ast::SKI::app(
+            return Ok(ast::SKI::app(ast::SKI::app(
                 parse_ski(&inp[..matched_parens_open])?,
-                ast::SKI::app(
-                    parse_ski(&inp[matched_parens_open + 1..matched_parens_close])?,
+                
+                    parse_ski(&inp[matched_parens_open + 1..matched_parens_close])?),
                     parse_ski(&inp[matched_parens_close + 1..inp.len()])?,
                 ),
-            ));
+            );
         }
     }
 }
@@ -122,7 +125,7 @@ pub fn match_parens(open_parens: Vec<usize>, close_parens: Vec<usize>) -> (usize
 /// parse any SKI variant
 pub fn parse_ski(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
     match inp.chars().count() {
-        0 => Err(String::from("Empty input")),
+        0 => Err(ast::SKIErr::ParseError(String::from("Empty input"))),
         1 => parse_single_char(&inp.chars().next().unwrap()), // this unwrap should be fine as we already checked the length.
         _ => parse_app(inp),
     }
@@ -188,41 +191,41 @@ mod tests {
     fn parse_and_eval_fails_with_non_primitive() {
         assert_eq!(
             parse_and_eval(&String::from("KIT")),
-            Err(String::from("no SKI primitive"))
+            Err(ast::SKIErr::ParseError(String::from("no SKI primitive")))
         );
         assert_eq!(
             parse_and_eval(&String::from("T")),
-            Err(String::from("no SKI primitive"))
+            Err(ast::SKIErr::ParseError(String::from("no SKI primitive")))
         );
         assert_eq!(
             parse_and_eval(&String::from("AKI")),
-            Err(String::from("no SKI primitive"))
+            Err(ast::SKIErr::ParseError(String::from("no SKI primitive")))
         );
     }
     #[test]
     fn parse_and_eval_fails_with_unclosed_parens() {
         assert_eq!(
             parse_and_eval(&String::from("K(I")),
-            Err(String::from("unclosed parentheses"))
+            Err(ast::SKIErr::SyntaxError(String::from("unclosed parentheses")))
         );
         assert_eq!(
             parse_and_eval(&String::from("K(IS(KI)")),
-            Err(String::from("unclosed parentheses"))
+            Err(ast::SKIErr::SyntaxError(String::from("unclosed parentheses")))
         );
     }
     #[test]
     fn parse_and_eval_fails_with_unmatched_parens() {
         assert_eq!(
             parse_and_eval(&String::from("K(I))")),
-            Err(String::from("unmatched closing parentheses"))
-        );
+            Err(ast::SKIErr::SyntaxError(String::from("unmatched closing parentheses"))
+        ));
         assert_eq!(
             parse_and_eval(&String::from("K(I)K)")),
-            Err(String::from("unmatched closing parentheses"))
-        );
+            Err(ast::SKIErr::SyntaxError(String::from("unmatched closing parentheses"))
+        ));
         assert_eq!(
             parse_and_eval(&String::from("K(IK)SK)")),
-            Err(String::from("unmatched closing parentheses"))
-        );
+            Err(ast::SKIErr::SyntaxError(String::from("unmatched closing parentheses"))
+        ));
     }
 }

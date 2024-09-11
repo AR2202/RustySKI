@@ -1,6 +1,6 @@
 use std::fmt;
 
-#[derive( Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum SKI {
     S,
     K,
@@ -41,4 +41,9 @@ impl SKI {
         SKI::Application(Box::new(App { combinator, arg }))
     }
 }
-pub type SKIErr = String;
+//pub type SKIErr = String;
+#[derive(Debug, PartialEq, Clone)]
+pub enum SKIErr {
+    ParseError(String),
+    SyntaxError(String),
+}
