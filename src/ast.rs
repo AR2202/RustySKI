@@ -27,7 +27,7 @@ impl fmt::Debug for SKI {
 impl fmt::Debug for App {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.arg {
-           SKI::Application(x) => write!(f, "{:?}({:?})", self.combinator, self.arg),
+            SKI::Application(x) => write!(f, "{:?}({:?})", self.combinator, self.arg),
             _ => write!(f, "{:?}{:?}", self.combinator, self.arg),
         }
     }
@@ -45,8 +45,16 @@ impl SKI {
     }
 }
 //pub type SKIErr = String;
-#[derive(Debug, PartialEq, Clone)]
+#[derive( PartialEq, Clone)]
 pub enum SKIErr {
     ParseError(String),
     SyntaxError(String),
+}
+impl fmt::Debug for SKIErr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            SKIErr::ParseError(x) => write!(f, "Parse Error: {}", x),
+            SKIErr::SyntaxError(x) => write!(f, "Syntax Error: {}", x),
+        }
+    }
 }
