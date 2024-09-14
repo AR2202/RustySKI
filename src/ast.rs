@@ -26,7 +26,10 @@ impl fmt::Debug for SKI {
 /// custom formatter for App
 impl fmt::Debug for App {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}{:?}", self.combinator, self.arg)
+        match &self.arg {
+           SKI::Application(x) => write!(f, "{:?}({:?})", self.combinator, self.arg),
+            _ => write!(f, "{:?}{:?}", self.combinator, self.arg),
+        }
     }
 }
 impl SKI {

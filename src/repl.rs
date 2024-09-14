@@ -4,7 +4,7 @@ pub fn repl() {
     loop {
         let mut inp = String::new();
 
-        println!("please enter a SKI expression");
+        println!("please enter a SKI expression, or enter 'quit' to exit:");
         io::stdin()
             .read_line(&mut inp)
             .expect("Failed to read line");
