@@ -44,7 +44,7 @@ impl SKI {
         SKI::Application(Box::new(App { combinator, arg }))
     }
 }
-//pub type SKIErr = String;
+
 #[derive( PartialEq, Clone)]
 pub enum SKIErr {
     ParseError(String),

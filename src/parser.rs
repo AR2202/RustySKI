@@ -18,37 +18,6 @@ pub fn maybe_parse_single_char(inp: &Option<char>) -> Result<ast::SKI, ast::SKIE
     }
 }
 /// parses the App variant of the ski combinator
-pub fn parse_app2(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
-    if inp.ends_with('(') {
-        return Err(ast::SKIErr::SyntaxError(String::from(
-            "unclosed parentheses",
-        )));
-    }
-    if inp.ends_with(')') {
-        if inp.starts_with('(') {
-            return parse_ski(&inp[1..inp.len() - 1]);
-        }
-        for (i, c) in inp.char_indices() {
-            if c == '(' {
-                return Ok(ast::SKI::app(
-                    parse_ski(&inp[..i])?,
-                    parse_ski(&inp[i + 1..inp.len() - 1])?,
-                ));
-            }
-        }
-        return Err(ast::SKIErr::SyntaxError(String::from(
-            "unmatched closing parentheses",
-        )));
-    } else {
-        match maybe_parse_single_char(&inp.chars().last()) {
-            Err(e) => return Err(e),
-            Ok(skiprim) => match parse_ski(&inp[..inp.len() - 1]) {
-                Err(e) => return Err(e),
-                Ok(skiexpr) => return Ok(ast::SKI::app(skiexpr, skiprim)),
-            },
-        }
-    }
-}
 pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
     let open_parens: Vec<usize> = inp
         .char_indices()
@@ -107,7 +76,7 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
         }
     }
 }
-
+///this function tries to match up parentheses
 pub fn match_parens(open_parens: Vec<usize>, close_parens: Vec<usize>) -> (usize, usize) {
     let mut open_iter = open_parens.iter();
     let mut close_iter = close_parens.iter();
@@ -138,6 +107,7 @@ pub fn parse_ski(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
         _ => parse_app(inp),
     }
 }
+/// parsing, then evaluating
 pub fn parse_and_eval(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
     parse_ski(inp).map(|ski| eval::eval(ski))
 }
