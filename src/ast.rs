@@ -1,11 +1,31 @@
 use std::fmt;
-
+use quickcheck::{Arbitrary, Gen};
 #[derive(Clone, PartialEq)]
 pub enum SKI {
     S,
     K,
     I,
     Application(Box<App>),
+}
+impl Arbitrary for SKI {
+    fn arbitrary(g: &mut Gen) -> SKI {
+        // Define the likelihood for each variant
+        let choice = u8::arbitrary(g) % 4;
+        match choice {
+            0 => SKI::S,
+            1 => SKI::K,
+            2 => SKI::I,
+            _ => SKI::Application(Box::new(App::arbitrary(g))),
+        }
+    }
+}
+impl Arbitrary for App {
+    fn arbitrary(g: &mut Gen) -> App {
+        App {
+            combinator: SKI::arbitrary(g),
+            arg: SKI::arbitrary(g),
+        }
+    }
 }
 #[derive(Clone, PartialEq)]
 pub struct App {

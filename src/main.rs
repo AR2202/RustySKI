@@ -2,6 +2,7 @@ use RustySKI::ast;
 use RustySKI::parser;
 use RustySKI::eval;
 use RustySKI::repl;
+#[macro_use]
 fn main() {
     // this prints SKI on separate lines
     println!("{:?}", eval::eval(ast::SKI::S));
