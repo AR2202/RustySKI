@@ -12,7 +12,7 @@ pub fn eval(skiexp: ast::SKI) -> ast::SKI {
                 ast::SKI::Application(app3) => match &app3.combinator {
                     ast::SKI::S => eval(ast::SKI::app(
                         ast::SKI::app(app3.arg.clone(), app.arg.clone()),
-                        ast::SKI::app(app2.arg.clone(), app3.arg.clone()),
+                        ast::SKI::app(app2.arg.clone(), app.arg.clone()),
                     )),
 
                     _ => eval(ast::SKI::app(eval(app.combinator.clone()), app.arg.clone())),
