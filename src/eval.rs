@@ -5,54 +5,35 @@ use crate::ast;
 /// function eval reduces a ast::SKI expression to a simpler one if reducable
 pub fn eval(skiexp: ast::SKI) -> ast::SKI {
     match skiexp {
-        ast::SKI::Application(app) => {
-            
-            match &app.combinator {
-                ast::SKI::I => eval(app.arg),
+        ast::SKI::Application(app) => match &app.combinator {
+            ast::SKI::I => eval(app.arg),
+            ast::SKI::Application(app2) => match &app2.combinator {
+                ast::SKI::K => eval(app2.arg.clone()),
+                ast::SKI::Application(app3) => match &app3.combinator {
+                    ast::SKI::S => eval(ast::SKI::app(
+                        ast::SKI::app(app3.arg.clone(), app.arg.clone()),
+                        ast::SKI::app(app2.arg.clone(), app3.arg.clone()),
+                    )),
 
-                ast::SKI::Application(app2) => {
-                   
-                    match &app2.combinator {
-                        ast::SKI::K => eval(app2.arg.clone()),
-                        ast::SKI::Application(app3) => {
-                           
-                            match &app3.combinator {
-                                ast::SKI::S => eval(ast::SKI::app(
-                                    ast::SKI::app(app3.arg.clone(), app.arg.clone()),
-                                    ast::SKI::app(app2.arg.clone(), app3.arg.clone()),
-                                )),
+                    _ => eval(ast::SKI::app(eval(app.combinator.clone()), app.arg.clone())),
+                },
 
-                                _ => eval(ast::SKI::app(
-                                    eval(app.combinator.clone()),
-                                    app.arg.clone(),
-                                )),
-                            }
-                        }
+                ast::SKI::S => ast::SKI::app(
+                    ast::SKI::app(ast::SKI::S, eval(app2.arg.clone())),
+                    eval(app.arg.clone()),
+                ),
+                _ => eval(ast::SKI::app(eval(app.combinator.clone()), app.arg.clone())),
+            },
 
-                        ast::SKI::S => ast::SKI::app(
-                            ast::SKI::app(ast::SKI::S, eval(app2.arg.clone())),
-                            eval(app.arg.clone()),
-                        ),
-                        _ => eval(ast::SKI::app(eval(app.combinator.clone()), app.arg.clone())),
-                    }
-                }
+            ast::SKI::K => ast::SKI::app(ast::SKI::K, eval(app.arg.clone())),
 
-                ast::SKI::K => ast::SKI::app(ast::SKI::K, eval(app.arg.clone())),
-
-                ast::SKI::S => ast::SKI::app(ast::SKI::S, eval(app.arg.clone())),
-            }
-        }
+            ast::SKI::S => ast::SKI::app(ast::SKI::S, eval(app.arg.clone())),
+        },
 
         ski => ski,
     }
 }
-fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
-    let mut rev = vec![];
-    for x in xs.iter() {
-        rev.insert(0, x.clone())
-    }
-    rev
-}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -64,14 +45,22 @@ mod tests {
         eval(ski) == eval(i_applied_to_ski)
     }
     #[quickcheck_macros::quickcheck]
-    /// A property that I is identity
+    /// A property that SKx is equivalent to I
+    fn prop_skx_identity(ski: ast::SKI, ski2: ast::SKI) -> bool {
+        let skx_applied_to_ski = ast::SKI::app(
+            ast::SKI::app(ast::SKI::app(ast::SKI::S, ast::SKI::K), ski2),
+            ski.clone(),
+        );
+        eval(ski) == eval(skx_applied_to_ski)
+    }
+    #[quickcheck_macros::quickcheck]
+    /// A property that K returns the first argument
     fn prop_k_returns_first_arg(arg1: ast::SKI, arg2: ast::SKI) -> bool {
-        let k_applied_to_both = ast::SKI::app(ast::SKI::app(ast::SKI::K, 
-            arg1.clone()), arg2);
+        let k_applied_to_both = ast::SKI::app(ast::SKI::app(ast::SKI::K, arg1.clone()), arg2);
         eval(arg1) == eval(k_applied_to_both)
     }
     #[test]
-    /// tests that i is irreducable
+    /// tests that I is irreducable
     fn i_evaluates_to_i() {
         let result = eval(ast::SKI::I);
         assert_eq!(result, ast::SKI::I);
