@@ -21,13 +21,13 @@ pub fn maybe_parse_single_char(inp: &Option<char>) -> Result<ast::SKI, ast::SKIE
 pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
     let open_parens: Vec<usize> = inp
         .char_indices()
-        .filter(|(i, c)| *c == '(')
-        .map(|(i, c)| i)
+        .filter(|(_i, c)| *c == '(')
+        .map(|(i, _c)| i)
         .collect();
     let close_parens: Vec<usize> = inp
         .char_indices()
-        .filter(|(i, c)| *c == ')')
-        .map(|(i, c)| i)
+        .filter(|(_i, c)| *c == ')')
+        .map(|(i, _c)| i)
         .collect();
 
     if open_parens.len() > close_parens.len() {
@@ -40,12 +40,12 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
             "unmatched closing parentheses",
         )));
     }
-    if open_parens.len() == 0 {
+    if open_parens.is_empty() {
         match maybe_parse_single_char(&inp.chars().last()) {
-            Err(e) => return Err(e),
+            Err(e) =>  Err(e),
             Ok(skiprim) => match parse_ski(&inp[..inp.len() - 1]) {
-                Err(e) => return Err(e),
-                Ok(skiexpr) => return Ok(ast::SKI::app(skiexpr, skiprim)),
+                Err(e) =>  Err(e),
+                Ok(skiexpr) =>  Ok(ast::SKI::app(skiexpr, skiprim)),
             },
         }
     } else {
@@ -61,18 +61,18 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
             }
         }
         if matched_parens_close == inp.len() - 1 {
-            return Ok(ast::SKI::app(
+           Ok(ast::SKI::app(
                 parse_ski(&inp[..matched_parens_open])?,
                 parse_ski(&inp[matched_parens_open + 1..matched_parens_close])?,
-            ));
+            ))
         } else {
-            return Ok(ast::SKI::app(
+           Ok(ast::SKI::app(
                 ast::SKI::app(
                     parse_ski(&inp[..matched_parens_open])?,
                     parse_ski(&inp[matched_parens_open + 1..matched_parens_close])?,
                 ),
                 parse_ski(&inp[matched_parens_close + 1..inp.len()])?,
-            ));
+            ))
         }
     }
 }
@@ -82,15 +82,15 @@ pub fn match_parens(open_parens: Vec<usize>, close_parens: Vec<usize>) -> (usize
     let mut close_iter = close_parens.iter();
     let open = open_iter.next();
     match open {
-        None => return (0, 0),
+        None =>  (0, 0),
         Some(&op) => loop {
             let next_open = open_iter.next();
             let next_close = close_iter.next();
             match next_open {
-                None => return (op, *next_close.unwrap()),
+                None => return(op, *next_close.unwrap()),
                 Some(o) => {
                     if o > next_close.unwrap() {
-                        return (op, *next_close.unwrap());
+                         return(op, *next_close.unwrap());
                     } else {
                         continue;
                     }
@@ -109,7 +109,7 @@ pub fn parse_ski(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
 }
 /// parsing, then evaluating
 pub fn parse_and_eval(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
-    parse_ski(inp).map(|ski| eval::eval(ski))
+    parse_ski(inp).map(eval::eval)
 }
 
 #[cfg(test)]

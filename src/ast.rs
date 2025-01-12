@@ -1,5 +1,6 @@
-use std::fmt;
 use quickcheck::{Arbitrary, Gen};
+use std::fmt;
+use std::iter;
 #[derive(Clone, PartialEq)]
 pub enum SKI {
     S,
@@ -18,13 +19,46 @@ impl Arbitrary for SKI {
             _ => SKI::Application(Box::new(App::arbitrary(g))),
         }
     }
+    fn shrink(&self) -> Box<dyn Iterator<Item = Self>> {
+        match self {
+            SKI::S | SKI::K | SKI::I => Box::new(iter::empty()),
+            SKI::Application(app) => {
+                let shrinked_app = app.shrink().map(SKI::Application);
+                let simple_forms = vec![SKI::S, SKI::K, SKI::I];
+                Box::new(simple_forms.into_iter().chain(shrinked_app))
+            }
+        }
+    }
 }
+
 impl Arbitrary for App {
     fn arbitrary(g: &mut Gen) -> App {
         App {
             combinator: SKI::arbitrary(g),
             arg: SKI::arbitrary(g),
         }
+    }
+
+    fn shrink(&self) -> Box<dyn Iterator<Item = App>> {
+        let mut shrinks = Vec::new();
+
+        // Shrink `combinator` only, keeping `arg` the same
+        for c in self.combinator.shrink() {
+            shrinks.push(App {
+                combinator: c,
+                arg: self.arg.clone(),
+            });
+        }
+
+        // Shrink `arg` only, keeping `combinator` the same
+        for a in self.arg.shrink() {
+            shrinks.push(App {
+                combinator: self.combinator.clone(),
+                arg: a,
+            });
+        }
+
+        Box::new(shrinks.into_iter())
     }
 }
 #[derive(Clone, PartialEq)]
@@ -54,10 +88,7 @@ impl fmt::Debug for App {
 }
 impl SKI {
     pub fn is_application(&self) -> bool {
-        match self {
-            SKI::Application(_) => true,
-            _ => false,
-        }
+        matches!(self, SKI::Application(_))
     }
     /// simple helper function for creating the Application variant of the SKI enum
     pub fn app(combinator: SKI, arg: SKI) -> SKI {
@@ -65,7 +96,7 @@ impl SKI {
     }
 }
 
-#[derive( PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub enum SKIErr {
     ParseError(String),
     SyntaxError(String),

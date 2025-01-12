@@ -56,12 +56,19 @@ fn reverse<T: Clone>(xs: &[T]) -> Vec<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[quickcheck_macros::quickcheck]
     /// A property that I is identity
-    fn prop_I_identity(ski: ast::SKI) -> bool {
-        let i_applied_to_ski =ast::SKI::app(ast::SKI::I, ski.clone());
+    fn prop_i_identity(ski: ast::SKI) -> bool {
+        let i_applied_to_ski = ast::SKI::app(ast::SKI::I, ski.clone());
         eval(ski) == eval(i_applied_to_ski)
+    }
+    #[quickcheck_macros::quickcheck]
+    /// A property that I is identity
+    fn prop_k_returns_first_arg(arg1: ast::SKI, arg2: ast::SKI) -> bool {
+        let k_applied_to_both = ast::SKI::app(ast::SKI::app(ast::SKI::K, 
+            arg1.clone()), arg2);
+        eval(arg1) == eval(k_applied_to_both)
     }
     #[test]
     /// tests that i is irreducable
