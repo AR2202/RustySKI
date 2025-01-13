@@ -1,6 +1,6 @@
 use RustySKI::ast;
-use RustySKI::parser;
 use RustySKI::eval;
+use RustySKI::parser;
 use RustySKI::repl;
 #[macro_use]
 fn main() {

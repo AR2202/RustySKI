@@ -1,4 +1,5 @@
 use crate::ast;
+use crate::ast::SKI;
 use crate::eval;
 
 /// parses a single char as a SKI primitive or else returns a SKIErr
@@ -42,57 +43,95 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
     }
     if open_parens.is_empty() {
         match maybe_parse_single_char(&inp.chars().last()) {
-            Err(e) =>  Err(e),
+            Err(e) => Err(e),
             Ok(skiprim) => match parse_ski(&inp[..inp.len() - 1]) {
-                Err(e) =>  Err(e),
-                Ok(skiexpr) =>  Ok(ast::SKI::app(skiexpr, skiprim)),
+                Err(e) => Err(e),
+                Ok(skiexpr) => Ok(ast::SKI::app(skiexpr, skiprim)),
             },
         }
     } else {
-        let (matched_parens_open, matched_parens_close) = match_parens(open_parens, close_parens);
+        let (matched_parens_open, matched_parens_close) = match_parens(&open_parens, &close_parens);
         //if the parens are all the way around an expression, they can be removed
         if matched_parens_open == 0 {
             if matched_parens_close == inp.len() - 1 {
                 return parse_ski(&inp[1..inp.len() - 1]);
             } else {
-                return 
-                    //consider if it is actually valid to index into string slices like this
-                    parse_ski(&(inp[1..matched_parens_close].to_owned() +&inp[matched_parens_close + 1..inp.len()] ))
-                   ;
+                //consider if it is actually valid to index into string slices like this
+                return parse_ski(
+                    &(inp[1..matched_parens_close].to_owned()
+                        + &inp[matched_parens_close + 1..inp.len()]),
+                );
             }
         }
         if matched_parens_close == inp.len() - 1 {
-           Ok(ast::SKI::app(
+            Ok(ast::SKI::app(
                 parse_ski(&inp[..matched_parens_open])?,
                 parse_ski(&inp[matched_parens_open + 1..matched_parens_close])?,
             ))
         } else {
             //this is currently incorrect and needs to be fixed
-           Ok(ast::SKI::app(
-                ast::SKI::app(
-                    parse_ski(&inp[..matched_parens_open])?,
-                    parse_ski(&inp[matched_parens_open + 1..matched_parens_close])?,
-                ),
-                parse_ski(&inp[matched_parens_close + 1..inp.len()])?,
-            ))
+            let mut blocks = identify_blocks(&open_parens, &close_parens, &inp);
+            blocks.reverse();
+
+            create_app(&blocks, &inp)
         }
     }
 }
+pub fn create_app(blocks: &Vec<(usize, usize)>, skiexp: &str) -> Result<ast::SKI, ast::SKIErr> {
+    if blocks.len() == 1 {
+        parse_ski(&skiexp[blocks[0].0..blocks[0].1])
+    } else {
+        match create_app(&blocks[1..].to_vec(), &skiexp) {
+            Err(e) => Err(e),
+            Ok(ski) => Ok(ast::SKI::app(
+                ski,
+                parse_ski(&skiexp[blocks[0].0..blocks[0].1])?,
+            )),
+        }
+    }
+}
+/// this function creates blocks of combinators
+pub fn identify_blocks(
+    open_parens: &Vec<usize>,
+    close_parens: &Vec<usize>,
+    skiexp: &str,
+) -> Vec<(usize, usize)> {
+    let mut block_starts = Vec::new();
+    let mut block_ends = Vec::new();
+    let mut curr_index = 0;
+    for i in 0..open_parens.len() {
+        for j in curr_index..open_parens[i] {
+            block_starts.push(j);
+            block_ends.push(j + 1);
+        }
+        block_starts.push(open_parens[i] + 1);
+        block_ends.push(close_parens[i]);
+        curr_index = close_parens[i] + 1;
+    }
+    for k in curr_index..skiexp.len(){
+        block_starts.push(k);
+        block_ends.push(k+1);
+    }
+    block_starts
+        .into_iter()
+        .zip(block_ends.into_iter())
+        .collect()
+}
 ///this function tries to match up parentheses
-pub fn match_parens(open_parens: Vec<usize>, close_parens: Vec<usize>) -> (usize, usize) {
+pub fn match_parens(open_parens: &Vec<usize>, close_parens: &Vec<usize>) -> (usize, usize) {
     let mut open_iter = open_parens.iter();
     let mut close_iter = close_parens.iter();
     let open = open_iter.next();
     match open {
-        None =>  (0, 0),
+        None => (0, 0),
         Some(&op) => loop {
             let next_open = open_iter.next();
             let next_close = close_iter.next();
             match next_open {
-                None => return(op, *next_close.unwrap()),
+                None => return (op, *next_close.unwrap()),
                 Some(o) => {
                     if o > next_close.unwrap() {
-                         return(op, *next_close.unwrap());
+                        return (op, *next_close.unwrap());
                     } else {
                         continue;
                     }
@@ -189,10 +228,14 @@ mod tests {
     fn parse_ski_succeeds_with_parens_middle_longer_expr() {
         assert_eq!(
             parse_ski(&String::from("K(II)SK")),
-            Ok(ast::SKI::app(ast::SKI::app(ast::SKI::app(ast::SKI::K, ast::SKI::app(ast::SKI::I,ast::SKI::I)), ast::SKI::S),
-            ast::SKI::K,
-        )
-        ));
+            Ok(ast::SKI::app(
+                ast::SKI::app(
+                    ast::SKI::app(ast::SKI::K, ast::SKI::app(ast::SKI::I, ast::SKI::I)),
+                    ast::SKI::S
+                ),
+                ast::SKI::K,
+            ))
+        );
     }
     #[test]
     fn parse_ski_succeeds_with_parens_middle() {
