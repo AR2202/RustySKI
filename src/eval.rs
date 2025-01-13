@@ -5,10 +5,17 @@ use crate::ast;
 /// function eval reduces a ast::SKI expression to a simpler one if reducable
 pub fn eval(skiexp: ast::SKI) -> ast::SKI {
     match skiexp {
+        //check if it's the Application variant of the enum
         ast::SKI::Application(app) => match &app.combinator {
+            //I can be evaluated with only 1 argument
             ast::SKI::I => eval(app.arg),
             ast::SKI::Application(app2) => match &app2.combinator {
+                //if 2 arguments are given, K returns the first
                 ast::SKI::K => eval(app2.arg.clone()),
+                //S can be evaluated with 3 arguments
+                //applying the first to the third
+                //the second to the third 
+                //and the result of the first application to the second
                 ast::SKI::Application(app3) => match &app3.combinator {
                     ast::SKI::S => eval(ast::SKI::app(
                         ast::SKI::app(app3.arg.clone(), app.arg.clone()),
@@ -24,12 +31,16 @@ pub fn eval(skiexp: ast::SKI) -> ast::SKI {
                 ),
                 _ => eval(ast::SKI::app(eval(app.combinator.clone()), app.arg.clone())),
             },
-
+            
+            // the K variant needs 2 arguments
+            // if only 1 is given, evaluate the argument and apply K to it
             ast::SKI::K => ast::SKI::app(ast::SKI::K, eval(app.arg.clone())),
-
+            // the S variant needs 3 arguments
+            // if only 1 is given, evaluate the argument
+            // and apply S to it 
             ast::SKI::S => ast::SKI::app(ast::SKI::S, eval(app.arg.clone())),
         },
-
+        //in case it's a ski primitive, it is returned without modificaiton
         ski => ski,
     }
 }
@@ -122,6 +133,23 @@ mod tests {
             ast::SKI::I,
         );
         assert_eq!(eval(sksi), ast::SKI::I);
+    }
+    #[test]
+    /// tests SKSI reduces to I
+    fn s_with_parens() {
+        let sksi_parens = ast::SKI::app(
+            ast::SKI::app(ast::SKI::app(ast::SKI::S, ast::SKI::K), ast::SKI::S),
+            ast::SKI::I,
+        );
+        assert_eq!(eval(sksi_parens), ast::SKI::I);
+    }
+    #[test]
+    /// tests SKSI reduces to I
+    fn k_with_parens() {
+        let kiisk_parens = ast::SKI::app(ast::SKI::app(ast::SKI::app(ast::SKI::K, ast::SKI::app(ast::SKI::I,ast::SKI::I)), ast::SKI::S),
+            ast::SKI::K,
+        );
+        assert_eq!(eval(kiisk_parens), ast::SKI::K);
     }
     #[test]
     /// tests SKSI reduces to I

@@ -50,6 +50,7 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
         }
     } else {
         let (matched_parens_open, matched_parens_close) = match_parens(open_parens, close_parens);
+        //if the parens are all the way around an expression, they can be removed
         if matched_parens_open == 0 {
             if matched_parens_close == inp.len() - 1 {
                 return parse_ski(&inp[1..inp.len() - 1]);
@@ -66,6 +67,7 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
                 parse_ski(&inp[matched_parens_open + 1..matched_parens_close])?,
             ))
         } else {
+            //this is currently incorrect and needs to be fixed
            Ok(ast::SKI::app(
                 ast::SKI::app(
                     parse_ski(&inp[..matched_parens_open])?,
@@ -183,7 +185,15 @@ mod tests {
             ))
         );
     }
-
+    #[test]
+    fn parse_ski_succeeds_with_parens_middle_longer_expr() {
+        assert_eq!(
+            parse_ski(&String::from("K(II)SK")),
+            Ok(ast::SKI::app(ast::SKI::app(ast::SKI::app(ast::SKI::K, ast::SKI::app(ast::SKI::I,ast::SKI::I)), ast::SKI::S),
+            ast::SKI::K,
+        )
+        ));
+    }
     #[test]
     fn parse_ski_succeeds_with_parens_middle() {
         assert_eq!(parse_and_eval(&String::from("K(IS)K")), Ok(ast::SKI::S));
@@ -191,6 +201,10 @@ mod tests {
     #[test]
     fn parse_and_eval_succeeds_with_kii() {
         assert_eq!(parse_and_eval(&String::from("KIS")), Ok(ast::SKI::I));
+    }
+    #[test]
+    fn parse_and_eval_succeeds_with_primitives_in_parens() {
+        assert_eq!(parse_and_eval(&String::from("K(I)(S)")), Ok(ast::SKI::I));
     }
     #[test]
     fn parse_and_eval_fails_with_non_primitive() {
