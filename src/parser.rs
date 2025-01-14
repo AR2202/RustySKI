@@ -20,12 +20,12 @@ pub fn maybe_parse_single_char(inp: &Option<char>) -> Result<ast::SKI, ast::SKIE
 }
 /// parses the App variant of the ski combinator
 pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
-    let open_parens: Vec<usize> = inp
+    let mut open_parens: Vec<usize> = inp
         .char_indices()
         .filter(|(_i, c)| *c == '(')
         .map(|(i, _c)| i)
         .collect();
-    let close_parens: Vec<usize> = inp
+    let mut close_parens: Vec<usize> = inp
         .char_indices()
         .filter(|(_i, c)| *c == ')')
         .map(|(i, _c)| i)
@@ -64,18 +64,25 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
             }
         }
         if matched_parens_close == inp.len() - 1 {
-            Ok(ast::SKI::app(
+            return Ok(ast::SKI::app(
                 parse_ski(&inp[..matched_parens_open])?,
                 parse_ski(&inp[matched_parens_open + 1..matched_parens_close])?,
-            ))
+            ));
         } else {
-            let mut blocks = identify_blocks(&open_parens, &close_parens, &inp);
-            blocks.reverse();
+            match match_all_parens(&mut open_parens, &mut close_parens){
+                None => Err(ast::SKIErr::SyntaxError(String::from(
+                    "unmatched parentheses",
+                ))),
+                Some(matched_parens)=>{
+            
+                let mut blocks = identify_blocks(&matched_parens, &inp);
+                blocks.reverse();
 
-            create_app(&blocks, &inp)
+            return create_app(&blocks, &inp);
+        }
         }
     }
-}
+}}
 pub fn create_app(blocks: &Vec<(usize, usize)>, skiexp: &str) -> Result<ast::SKI, ast::SKIErr> {
     if blocks.len() == 1 {
         parse_ski(&skiexp[blocks[0].0..blocks[0].1])
@@ -91,21 +98,21 @@ pub fn create_app(blocks: &Vec<(usize, usize)>, skiexp: &str) -> Result<ast::SKI
 }
 /// this function creates blocks of combinators
 pub fn identify_blocks(
-    open_parens: &Vec<usize>,
-    close_parens: &Vec<usize>,
+    matched_parens: &Vec<(usize,usize)>,
+    
     skiexp: &str,
 ) -> Vec<(usize, usize)> {
     let mut block_starts = Vec::new();
     let mut block_ends = Vec::new();
     let mut curr_index = 0;
-    for i in 0..open_parens.len() {
-        for j in curr_index..open_parens[i] {
+    for i in 0..matched_parens.len() {
+        for j in curr_index..matched_parens[i].0 {
             block_starts.push(j);
             block_ends.push(j + 1);
         }
-        block_starts.push(open_parens[i] + 1);
-        block_ends.push(close_parens[i]);
-        curr_index = close_parens[i] + 1;
+        block_starts.push(matched_parens[i].0 + 1);
+        block_ends.push(matched_parens[i].1);
+        curr_index = matched_parens[i].1 + 1;
     }
     for k in curr_index..skiexp.len() {
         block_starts.push(k);
@@ -138,6 +145,21 @@ pub fn match_parens(open_parens: &Vec<usize>, close_parens: &Vec<usize>) -> (usi
             }
         },
     }
+}
+///this function tries to match up all parentheses
+pub fn match_all_parens(open_parens: & mut Vec<usize>, close_parens: & mut Vec<usize>) -> Option<Vec<(usize, usize)> >{
+    let mut matched_parens = Vec::new();
+    if open_parens.len() != close_parens.len(){
+        return None;
+    }
+    while ! open_parens.is_empty(){
+        let (matched_open, matched_close) = match_parens(&open_parens, &close_parens);
+        matched_parens.push((matched_open,matched_close));
+        open_parens.retain(|&x| x != matched_open);
+        close_parens.retain(|&x| x != matched_close);
+    }
+    Some(matched_parens)
+
 }
 /// parse any SKI variant
 pub fn parse_ski(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
