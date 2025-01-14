@@ -69,7 +69,6 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
                 parse_ski(&inp[matched_parens_open + 1..matched_parens_close])?,
             ))
         } else {
-            //this is currently incorrect and needs to be fixed
             let mut blocks = identify_blocks(&open_parens, &close_parens, &inp);
             blocks.reverse();
 
@@ -108,9 +107,9 @@ pub fn identify_blocks(
         block_ends.push(close_parens[i]);
         curr_index = close_parens[i] + 1;
     }
-    for k in curr_index..skiexp.len(){
+    for k in curr_index..skiexp.len() {
         block_starts.push(k);
-        block_ends.push(k+1);
+        block_ends.push(k + 1);
     }
     block_starts
         .into_iter()
@@ -156,19 +155,26 @@ pub fn parse_and_eval(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    #[test]
+    fn parse_succeeds_with_k_primitive() {
+        assert_eq!(parse_ski(&String::from("K")), Ok(ast::SKI::K));
+    }
+    #[test]
+    fn parse_succeeds_with_i_primitive() {
+        assert_eq!(parse_ski(&String::from("I")), Ok(ast::SKI::I));
+    }
     #[test]
     fn parse_app_succeeds_with_kii() {
         assert_eq!(
-            parse_app(&String::from("KIS")),
+            parse_app(&String::from("KII")),
             Ok(ast::SKI::app(
                 ast::SKI::app(ast::SKI::K, ast::SKI::I),
-                ast::SKI::S
+                ast::SKI::I
             ))
         );
     }
     #[test]
-    fn parse_ski_succeeds_with_kii() {
+    fn parse_ski_succeeds_with_kis() {
         assert_eq!(
             parse_ski(&String::from("KIS")),
             Ok(ast::SKI::app(
