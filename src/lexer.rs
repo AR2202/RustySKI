@@ -9,7 +9,7 @@ pub enum Token {
     Parens(Vec<Token>),
 }
 
-pub fn tokenizeSKI(inp: &str) -> Result<Vec<Token>, ast::SKIErr> {
+pub fn tokenize_ski(inp: &str) -> Result<Vec<Token>, ast::SKIErr> {
     let mut toks = Vec::new();
     let mut characters = inp.chars();
 
@@ -50,7 +50,7 @@ pub fn tokenizeSKI(inp: &str) -> Result<Vec<Token>, ast::SKIErr> {
                     }
                 }
             }
-            toks.push(Token::Parens(tokenizeSKI(&substr)?));
+            toks.push(Token::Parens(tokenize_ski(&substr)?));
         }
         ')' => {
             return Err(ast::SKIErr::SyntaxError(String::from(
@@ -58,7 +58,7 @@ pub fn tokenizeSKI(inp: &str) -> Result<Vec<Token>, ast::SKIErr> {
             )))
         }
         _ => {
-            return Err(ast::SKIErr::SyntaxError(String::from(
+            return Err(ast::SKIErr::ParseError(String::from(
                 "not a SKI primitive",
             )))
         }
@@ -73,31 +73,36 @@ mod tests {
     use super::*;
     #[test]
     fn tokenize_succeeds_with_k_primitive() {
-        assert_eq!(tokenizeSKI(&String::from("K")), Ok(vec![Token::KToken]));
+        assert_eq!(tokenize_ski(&String::from("K")), Ok(vec![Token::KToken]));
     }
+    
     #[test]
     fn tokenize_succeeds_with_ski() {
-        assert_eq!(tokenizeSKI(&String::from("SKI")), Ok(vec![Token::SToken,Token::KToken,Token::IToken]));
+        assert_eq!(tokenize_ski(&String::from("SKI")), Ok(vec![Token::SToken,Token::KToken,Token::IToken]));
+    }
+    #[test]
+    fn tokenize_succeeds_with_kis() {
+        assert_eq!(tokenize_ski(&String::from("KIS")), Ok(vec![Token::KToken,Token::IToken,Token::SToken]));
     }
     #[test]
     fn tokenize_succeeds_with_parens() {
-        assert_eq!(tokenizeSKI(&String::from("S(KI)")), Ok(vec![Token::SToken,Token::Parens(vec![Token::KToken,Token::IToken])]));
+        assert_eq!(tokenize_ski(&String::from("S(KI)")), Ok(vec![Token::SToken,Token::Parens(vec![Token::KToken,Token::IToken])]));
     }
     
     #[test]
     fn tokenize_succeeds_with_nested_parens() {
-        assert_eq!(tokenizeSKI(&String::from("S(K(I))")), Ok(vec![Token::SToken,Token::Parens(vec![Token::KToken,Token::Parens(vec![Token::IToken])])]));
+        assert_eq!(tokenize_ski(&String::from("S(K(I))")), Ok(vec![Token::SToken,Token::Parens(vec![Token::KToken,Token::Parens(vec![Token::IToken])])]));
     }
     #[test]
     fn tokenize_succeeds_with_multiple_parens() {
-        assert_eq!(tokenizeSKI(&String::from("S((K)(I))")), Ok(vec![Token::SToken,Token::Parens(vec![Token::Parens(vec![Token::KToken]),Token::Parens(vec![Token::IToken])])]));
+        assert_eq!(tokenize_ski(&String::from("S((K)(I))")), Ok(vec![Token::SToken,Token::Parens(vec![Token::Parens(vec![Token::KToken]),Token::Parens(vec![Token::IToken])])]));
     }
     #[test]
     fn tokenize_fails_with_unclosed_parens() {
-        assert_eq!(tokenizeSKI(&String::from("S(KI")), Err(ast::SKIErr::SyntaxError(String::from("unclosed parentheses"))));
+        assert_eq!(tokenize_ski(&String::from("S(KI")), Err(ast::SKIErr::SyntaxError(String::from("unclosed parentheses"))));
     }
     #[test]
     fn tokenize_fails_with_non_ski_primitive() {
-        assert_eq!(tokenizeSKI(&String::from("STKI")), Err(ast::SKIErr::SyntaxError(String::from("not a SKI primitive"))));
+        assert_eq!(tokenize_ski(&String::from("STKI")), Err(ast::SKIErr::ParseError(String::from("not a SKI primitive"))));
     }
 }
