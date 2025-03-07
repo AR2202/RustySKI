@@ -44,13 +44,9 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
         )));
     }
     if open_parens.is_empty() {
-        match maybe_parse_single_char(&inp.chars().last()) {
-            Err(e) => Err(e),
-            Ok(skiprim) => match parse_ski(&inp[..inp.len() - 1]) {
-                Err(e) => Err(e),
-                Ok(skiexpr) => Ok(ast::SKI::app(skiexpr, skiprim)),
-            },
-        }
+        let skiprim = maybe_parse_single_char(&inp.chars().last())?;
+        let skiexpr = parse_ski(&inp[..inp.len() - 1])?;
+        Ok(ast::SKI::app(skiexpr, skiprim))
     } else {
         let (matched_parens_open, matched_parens_close) = match_parens(&open_parens, &close_parens);
         //if the parens are all the way around an expression, they can be removed
@@ -71,17 +67,14 @@ pub fn parse_app(inp: &str) -> Result<ast::SKI, ast::SKIErr> {
                 parse_ski(&inp[matched_parens_open + 1..matched_parens_close])?,
             ));
         } else {
-            match match_all_parens(&mut open_parens, &mut close_parens) {
-                None => Err(ast::SKIErr::SyntaxError(String::from(
-                    "unmatched parentheses",
-                ))),
-                Some(matched_parens) => {
-                    let mut blocks = identify_blocks(&matched_parens, &inp);
-                    blocks.reverse();
+            let matched_parens = match_all_parens(&mut open_parens, &mut close_parens).ok_or(
+                ast::SKIErr::SyntaxError(String::from("unmatched parentheses")),
+            )?;
 
-                    return create_app(&blocks, &inp);
-                }
-            }
+            let mut blocks = identify_blocks(&matched_parens, &inp);
+            blocks.reverse();
+
+            create_app(&blocks, &inp)
         }
     }
 }
@@ -89,27 +82,24 @@ pub fn create_app(blocks: &Vec<(usize, usize)>, skiexp: &str) -> Result<ast::SKI
     if blocks.len() == 1 {
         parse_ski(&skiexp[blocks[0].0..blocks[0].1])
     } else {
-        match create_app(&blocks[1..].to_vec(), &skiexp) {
-            Err(e) => Err(e),
-            Ok(ski) => Ok(ast::SKI::app(
-                ski,
-                parse_ski(&skiexp[blocks[0].0..blocks[0].1])?,
-            )),
-        }
+        let ski = create_app(&blocks[1..].to_vec(), &skiexp)?;
+        Ok(ast::SKI::app(
+            ski,
+            parse_ski(&skiexp[blocks[0].0..blocks[0].1])?,
+        ))
     }
 }
-///parses from Vec of tokens to enum SKI 
+///parses from Vec of tokens to enum SKI
 pub fn parse_tokens(toks: &mut Vec<Token>) -> Result<ast::SKI, ast::SKIErr> {
-  
     if toks.is_empty() {
         Err(ast::SKIErr::ParseError(String::from("empty input")))
     } else if toks.len() == 1 {
         parse_ski_token(&toks[0])
     } else {
-        match parse_tokens(&mut toks[0..toks.len()-1].to_vec()) {
-            Err(e) => Err(e),
-            Ok(ski) => Ok(ast::SKI::app(ski, parse_ski_token(&toks[toks.len()-1])?)),
-        }
+        Ok(ast::SKI::app(
+            parse_tokens(&mut toks[0..toks.len() - 1].to_vec())?,
+            parse_ski_token(&toks[toks.len() - 1])?,
+        ))
     }
 }
 ///parses a single Token to SKI - used internally by parse_tokens
@@ -292,7 +282,13 @@ mod tests {
     }
     #[test]
     fn parse_and_eval_succeeds_with_xor() {
-        assert_eq!(parse_and_eval(&String::from("(K(K(KI)K)(KI))K((K(KI)K)K(KI))")), Ok(ast::SKI::Application(Box::new(ast::App{combinator:ast::SKI::K, arg:ast::SKI::I}))));
+        assert_eq!(
+            parse_and_eval(&String::from("(K(K(KI)K)(KI))K((K(KI)K)K(KI))")),
+            Ok(ast::SKI::Application(Box::new(ast::App {
+                combinator: ast::SKI::K,
+                arg: ast::SKI::I
+            })))
+        );
     }
     #[test]
     fn parse_and_eval_succeeds_with_parens_middle() {
@@ -306,10 +302,14 @@ mod tests {
     fn parse_tokens_succeeds_with_kis() {
         assert_eq!(
             parse_tokens(&mut vec![Token::KToken, Token::IToken, Token::SToken]),
-            Ok(ast::SKI::Application(Box::new(ast::App{combinator:
-                ast::SKI::Application(Box::new(ast::App{combinator:ast::SKI::K, arg:ast::SKI::I})),
-                arg:ast::SKI::S})
-    )));
+            Ok(ast::SKI::Application(Box::new(ast::App {
+                combinator: ast::SKI::Application(Box::new(ast::App {
+                    combinator: ast::SKI::K,
+                    arg: ast::SKI::I
+                })),
+                arg: ast::SKI::S
+            })))
+        );
     }
     #[test]
     fn parse_and_eval_succeeds_with_kis() {
