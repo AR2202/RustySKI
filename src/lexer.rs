@@ -102,6 +102,14 @@ mod tests {
         assert_eq!(tokenize_ski(&String::from("S(KI")), Err(ast::SKIErr::SyntaxError(String::from("unclosed parentheses"))));
     }
     #[test]
+    fn tokenize_fails_with_incorrect_inside_parens() {
+        assert_eq!(tokenize_ski(&String::from("S(KT)K")), Err(ast::SKIErr::ParseError(String::from("not a SKI primitive"))));
+    }
+    #[test]
+    fn tokenize_fails_with_incorrect_nested_parens() {
+        assert_eq!(tokenize_ski(&String::from("S(K(I)K")), Err(ast::SKIErr::SyntaxError(String::from("unclosed parentheses"))));
+    }
+    #[test]
     fn tokenize_fails_with_non_ski_primitive() {
         assert_eq!(tokenize_ski(&String::from("STKI")), Err(ast::SKIErr::ParseError(String::from("not a SKI primitive"))));
     }
